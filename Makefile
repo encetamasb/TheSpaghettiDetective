@@ -6,10 +6,10 @@ build-web-base-1.1:
 	docker build -t thespaghettidetective/web:base-1.1 -f web/Dockerfile.base web
 
 build-images:
-	docker-compose build --build-arg with_node=1 --build-arg user=user --build-arg group=user --build-arg uid=$(shell id -u) --build-arg gid=$(shell id -g)
+	docker-compose build --build-arg WITH_SQLITE=1 --build-arg WITH_NODE=1 --build-arg TSD_USER=user --build-arg TSD_GROUP=user --build-arg TSD_UID=$(shell id -u) --build-arg TSD_GID=$(shell id -g)
 
 build-web-and-tasks:
-	docker-compose build --build-arg with_sqlite=1 --build-arg with_node=1 --build-arg user=user --build-arg group=user --build-arg uid=$(shell id -u) --build-arg gid=$(shell id -g) web tasks
+	docker-compose build --build-arg WITH_SQLITE=1 --build-arg WITH_NODE=1 --build-arg TSD_USER=user --build-arg TSD_GROUP=user --build-arg TSD_UID=$(shell id -u) --build-arg TSD_GID=$(shell id -g) web tasks
 
 build-static:
 	docker-compose run --rm --name $(BASENAME)_frontbuilder --no-deps                    web bash -c "cd frontend && yarn install && yarn build"
