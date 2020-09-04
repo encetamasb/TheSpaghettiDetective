@@ -307,6 +307,7 @@ def secure_redirect(request):
 def octoprint_tunnel(request, printer_id):
     return render(request, 'octoprint_tunnel.html', {'printer': get_printer_or_404(printer_id, request)})
 
+
 @csrf_exempt
 @login_required
 def octoprint_http_proxy(request, printer_id):
@@ -368,6 +369,8 @@ def octoprint_http_proxy(request, printer_id):
         content = rewrite_sockjs_js(ensure_bytes(content))
     elif path.endswith('sockjs.min.js'):
         content = rewrite_sockjs_min_js(ensure_bytes(content))
+    elif path.endswith('loginui/static/js/main.js'):
+        content = rewrite_loginui_main_js(prefix, ensure_bytes(content))
 
     resp.write(content)
 
@@ -405,6 +408,13 @@ def rewrite_sockjs_min_js(content):
     return content.replace(
         b'addPath(t,"/websocket")',
         b'addPath(t.replace("/octoprint", "/ws/octoprint"),"/websocket")'
+    )
+
+
+def rewrite_loginui_main_js(prefix, content):
+    return content.replace(
+        b'BASE_URL;',
+        f'"{prefix}" + BASE_URL;'.encode()
     )
 
 
