@@ -13,7 +13,7 @@ from channels_presence.models import Presence
 
 from lib import redis
 from lib import channels
-from .octoprint_messages import process_octoprint_status
+from .octoprint_messages import process_octoprint_status, process_moonraker_status
 from app.models import *
 from .serializers import *
 
@@ -103,6 +103,7 @@ class OctoPrintConsumer(WebsocketConsumer):
 
     @newrelic.agent.background_task()
     def receive(self, text_data=None, bytes_data=None, **kwargs):
+        LOGGER.info(text_data)
         Presence.objects.touch(self.channel_name)
         try:
             printer = Printer.with_archived.get(id=self.current_printer().id)
@@ -111,6 +112,11 @@ class OctoPrintConsumer(WebsocketConsumer):
                 data = json.loads(text_data)
             else:
                 data = bson.loads(bytes_data)
+
+            if "plugin_type" in data:
+                LOGGER.error(data)
+                process_moonraker_status(printer, data)
+                return
 
             if 'janus' in data:
                 channels.send_janus_to_web(self.current_printer().id, data.get('janus'))
