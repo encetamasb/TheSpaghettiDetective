@@ -148,7 +148,7 @@ def process_moonraker_status(printer, status):
                 },
             },
             'progress': {
-                'completion': kstate.get('progress', 0.0) or 0.0,
+                'completion': kstate.get('progress', 0.0) * 100.0 or 0.0,
                 'filepos': kstate.get('file_position', 0) or 0,
                 'printTime': print_time,
                 'printTimeLeft': max(0, kstate.get('estimated_print_time', 0) - print_time),
