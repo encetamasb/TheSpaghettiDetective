@@ -1,7 +1,7 @@
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 import json
-from channels_presence.models import Room
+from channels_presence.models import Room, Presence
 from django.dispatch import receiver
 from channels_presence.signals import presence_changed
 
@@ -89,5 +89,8 @@ def send_viewing_status(printer_id, viewing_count=None):
     send_msg_to_printer(printer_id, {'remote_status': {'viewing': viewing_count > 0}})
 
 def num_ws_connections(group_name):
-    rooms = Room.objects.filter(channel_name=group_name)      # room.channel_name is actually the room name (= group name)
-    return rooms[0].get_anonymous_count() if len(rooms) > 0 else 0
+    count = Presence.objects.filter(
+        room__channel_name=group_name,
+        user__isnull=True
+    ).count()  # room.channel_name is actually the room name (= group name)
+    return count
