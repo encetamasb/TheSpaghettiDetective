@@ -9,15 +9,17 @@ from lib import mobile_notifications
 from app.models import PrintEvent, Printer
 from app.tasks import service_webhook
 from lib.heater_trackers import process_heater_temps
+from asgiref.sync import async_to_sync, sync_to_async
+from channels.db import database_sync_to_async
 
 STATUS_TTL_SECONDS = 240
 SVC_WEBHOOK_PROGRESS_PCTS = [25, 50, 75]
 
 
-def process_octoprint_status(printer: Printer, status: Dict) -> None:
+async def process_octoprint_status(printer: Printer, status: Dict) -> None:
     octoprint_settings = status.get('octoprint_settings')
     if octoprint_settings:
-        cache.printer_settings_set(printer.id, settings_dict(octoprint_settings))
+        await sync_to_async(cache.printer_settings_set)(printer.id, settings_dict(octoprint_settings))
 
     # for backward compatibility
     if status.get('octoprint_data'):
@@ -25,7 +27,7 @@ def process_octoprint_status(printer: Printer, status: Dict) -> None:
             status['octoprint_data']['temperatures'] = status['octoprint_temperatures']
 
     if status.get('octoprint_data', {}).get('_ts'):   # data format for plugin 1.6.0 and higher
-        cache.printer_status_set(printer.id, json.dumps(status.get('octoprint_data', {})), ex=STATUS_TTL_SECONDS)
+        await sync_to_async(cache.printer_status_set)(printer.id, json.dumps(status.get('octoprint_data', {})), ex=STATUS_TTL_SECONDS)
     else:
         octoprint_data: Dict = dict()
         set_as_str_if_present(octoprint_data, status.get('octoprint_data', {}), 'state')
@@ -34,16 +36,16 @@ def process_octoprint_status(printer: Printer, status: Dict) -> None:
         set_as_str_if_present(octoprint_data, status.get('octoprint_data', {}), 'currentZ')
         set_as_str_if_present(octoprint_data, status.get('octoprint_data', {}), 'job')
         set_as_str_if_present(octoprint_data, status.get('octoprint_data', {}), 'temperatures')
-        cache.printer_status_set(printer.id, octoprint_data, ex=STATUS_TTL_SECONDS)
+        await sync_to_async(cache.printer_status_set)(printer.id, octoprint_data, ex=STATUS_TTL_SECONDS)
 
     if status.get('current_print_ts'):
-        process_octoprint_status_with_ts(status, printer)
+        await database_sync_to_async(process_octoprint_status_with_ts)(status, printer)
 
-    channels.send_status_to_web(printer.id)
+    await sync_to_async(channels.send_status_to_web)(printer.id)
 
     temps = status.get('octoprint_data', {}).get('temperatures', None)
     if temps:
-        process_heater_temps(printer, temps)
+        await database_sync_to_async(process_heater_temps)(printer, temps)
 
 
 def settings_dict(octoprint_settings):
