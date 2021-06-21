@@ -67,9 +67,22 @@
         </div>
         <div v-else>
           <div class="lead">We have found {{discoveredPrinters.length}} OctoPrint(s) on your local network:</div>
-          <div v-for="discoveredPrinter in discoveredPrinters" :key="discoveredPrinter.device_id">
-            {{discoveredPrinter.device_id}}
-            <button class="btn btn-primary" @click="linkPrinter(discoveredPrinter.device_id)">Link</button>
+          <div v-for="discoveredPrinter in discoveredPrinters" :key="discoveredPrinter.device_id" class="discovered-printers">
+            <div>
+              <div>
+                <img class="logo-img"
+                  :src="require('@static/img/octoprint_logo.png')" />
+                <img class="logo-img"
+                  :src="require('@static/img/raspberry_pi.png')" />
+              </div>
+              <div>
+                Rasbperry Pi 4 B Rev 2
+              </div>
+              <div>
+                <a href="#">192.168.0.23</a>
+              </div>
+            </div>
+            <button class="btn btn-primary" @click="autoLinkPrinter(discoveredPrinter.device_id)">Link</button>
           </div>
         </div>
         <div v-if="discoveryCount > 4">
@@ -245,6 +258,7 @@ export default {
 
   created() {
     this.discoverPrinter()
+    this.getVerificationCode()
   },
 
   computed: {
@@ -326,18 +340,9 @@ export default {
     },
     nextTab() {
       document.querySelector('.wizard-nav.wizard-nav-pills li.active .wizard-icon-circle').classList.add('checked')
-
       this.onVerificationStep = document.querySelector('.wizard-nav.wizard-nav-pills li.active .wizard-icon-circle').id === 'step-PluginWizard1'
 
       if (this.onVerificationStep) {
-        if (!this.codeInterval) {
-          this.getVerificationCode()
-
-          this.codeInterval = setInterval(() => {
-            this.getVerificationCode()
-          }, 5000)
-        }
-
         const copyFunc = this.copyCode
 
         let ctrlDown = false, ctrlKey = 17, cmdKey = 91, cKey = 67
@@ -405,10 +410,7 @@ export default {
       }
     },
 
-    /**
-     * Get verification code from API
-     */
-    getVerificationCode() {
+    callVerificationCodeApi() {
       axios
         .get(this.verificationCodeUrl())
         .then((resp) => {
@@ -419,6 +421,13 @@ export default {
             }
           }
         })
+    },
+
+    getVerificationCode() {
+      this.callVerificationCodeApi()
+      setTimeout(() => {
+        this.getVerificationCode()
+      }, 5000)
     },
 
     showVerificationCodeHelpModal() {
@@ -459,9 +468,9 @@ export default {
       }, 3000)
     },
 
-    linkPrinter(deviceId) {
+    autoLinkPrinter(deviceId) {
       axios
-        .post(urls.printerDiscover(), { device_id: deviceId })
+        .post(urls.printerDiscover(), { code: this.verificationCode.code, device_id: deviceId })
         .then((resp) => {
           this.discoveredPrinters = resp.data
         })
@@ -608,4 +617,11 @@ li
     width: 100%
     font-size: 20px
     text-align: center
+
+.discovered-printers
+  display: flex
+  align-items: center
+  justify-content: space-between
+  .logo-img
+    height: 2.5rem
 </style>
